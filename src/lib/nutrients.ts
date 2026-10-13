@@ -1,0 +1,47 @@
+import type { NutrientDef, NutrientKey } from './types';
+
+export const NUTRIENTS: NutrientDef[] = [
+  { key: 'EM', label: 'EM (kcal/kg)', unit: 'kcal/kg', decimals: 0 },
+  { key: 'Fibres', label: 'Fibres', unit: '%', decimals: 2 },
+  { key: 'MG', label: 'Matière Grasse', unit: '%', decimals: 2 },
+  { key: 'PB', label: 'Protéine Brute', unit: '%', decimals: 2 },
+  { key: 'Lys', label: 'Lysine', unit: '%', decimals: 3 },
+  { key: 'Met', label: 'Méthionine', unit: '%', decimals: 3 },
+  { key: 'Met_Cys', label: 'Met+Cys', unit: '%', decimals: 3 },
+  { key: 'Thr', label: 'Thréonine', unit: '%', decimals: 3 },
+  { key: 'Trp', label: 'Tryptophane', unit: '%', decimals: 3 },
+  { key: 'Ca', label: 'Calcium', unit: '%', decimals: 2 },
+  { key: 'P', label: 'Phosphore', unit: '%', decimals: 2 },
+  { key: 'Na', label: 'Sodium', unit: '%', decimals: 2 },
+  { key: 'Val', label: 'Valine', unit: '%', decimals: 3 },
+  { key: 'Cl', label: 'Chlore', unit: '%', decimals: 2 },
+  { key: 'Arg', label: 'Arginine', unit: '%', decimals: 3 },
+  { key: 'Ile', label: 'Isoleucine', unit: '%', decimals: 3 },
+  { key: 'K', label: 'Potassium', unit: '%', decimals: 2 },
+  { key: 'A_Linol', label: 'Ac. Linoléique', unit: '%', decimals: 2 },
+  { key: 'Vit_A', label: 'Vit A (UI/kg)', unit: 'UI/kg', decimals: 0 },
+  { key: 'Vit_D3', label: 'Vit D3 (UI/kg)', unit: 'UI/kg', decimals: 0 },
+  { key: 'Vit_E', label: 'Vit E (mg/kg)', unit: 'mg/kg', decimals: 1 },
+  { key: 'Vit_K', label: 'Vit K (mg/kg)', unit: 'mg/kg', decimals: 2 },
+  { key: 'Vit_B1', label: 'Vit B1 (mg/kg)', unit: 'mg/kg', decimals: 2 },
+  { key: 'Vit_B2', label: 'Vit B2 (mg/kg)', unit: 'mg/kg', decimals: 2 },
+  { key: 'Vit_B6', label: 'Vit B6 (mg/kg)', unit: 'mg/kg', decimals: 2 },
+  { key: 'Vit_B12', label: 'Vit B12 (mg/kg)', unit: 'mg/kg', decimals: 3 },
+  { key: 'Niacine', label: 'Niacine (mg/kg)', unit: 'mg/kg', decimals: 1 },
+  { key: 'Ac_Folique', label: 'Ac. Folique (mg/kg)', unit: 'mg/kg', decimals: 2 },
+  { key: 'Ac_Panto', label: 'Ac. Panto. (mg/kg)', unit: 'mg/kg', decimals: 2 },
+  { key: 'Biotine', label: 'Biotine (mg/kg)', unit: 'mg/kg', decimals: 3 },
+  { key: 'Coline', label: 'Coline (mg/kg)', unit: 'mg/kg', decimals: 0 },
+  { key: 'Fe', label: 'Fer (mg/kg)', unit: 'mg/kg', decimals: 0 },
+  { key: 'Cu', label: 'Cuivre (mg/kg)', unit: 'mg/kg', decimals: 1 },
+  { key: 'Mn', label: 'Manganèse (mg/kg)', unit: 'mg/kg', decimals: 0 },
+  { key: 'Zn', label: 'Zinc (mg/kg)', unit: 'mg/kg', decimals: 0 },
+  { key: 'Se', label: 'Sélénium (mg/kg)', unit: 'mg/kg', decimals: 3 },
+  { key: 'I', label: 'Iode (mg/kg)', unit: 'mg/kg', decimals: 2 },
+  { key: 'Co', label: 'Cobalt (mg/kg)', unit: 'mg/kg', decimals: 2 },
+];
+
+export const NUTRIENT_KEYS = NUTRIENTS.map((n) => n.key);
+export const NUTRIENT_MAP = Object.fromEntries(
+  NUTRIENTS.map((n) => [n.key, n]),
+) as Record<NutrientKey, NutrientDef>;
