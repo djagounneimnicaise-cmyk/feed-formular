@@ -1,4 +1,12 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect... }
+  // CODE TRADUCTION - NE PAS TOUCHER
+declare global {
+  interface Window {
+    google: any;
+    googleTranslateElementInit: () => void;
+  }
+}
 import {
   Wheat, Scale, TrendingUp, AlertTriangle, CheckCircle2, XCircle,
   ChevronDown, ChevronUp, Calculator, RotateCcw,
@@ -79,6 +87,17 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 function App() {
+  useEffect(() => {
+    const addScript = document.createElement('script');
+    addScript.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    document.body.appendChild(addScript);
+    window.googleTranslateElementInit = () => {
+      new window.google.translate.TranslateElement(
+        { pageLanguage: 'fr', includedLanguages: 'fr,en', layout: 0 },
+        'google_translate_element'
+      );
+    };
+  }, []);
   const { user, loading: authLoading, signOut } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
   const [recoveryMode, setRecoveryMode] = useState(false);
@@ -96,6 +115,8 @@ function App() {
 
   if (authLoading) {
     return (
+      <div>
+  <div id="google_translate_element" style={{position:'fixed', top:'10px', right:'10px', zIndex:9999, background:'white', padding:'8px', borderRadius:'20px', border:'1px solid #ddd', boxShadow:'0 2px 10px rgba(0,0,0,0.1)'}}></div>
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
       </div>
@@ -1099,3 +1120,4 @@ function PrintReport({
 }
 
 export default App;
+</div>
