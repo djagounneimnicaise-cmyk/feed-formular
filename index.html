@@ -1,5 +1,12 @@
 <!doctype html>
 <html lang="fr">
+  <!-- TRADUCTEUR FR <-> EN -->
+<style>
+  #google_translate_element { position:fixed; top:10px; right:10px; z-index:99999; background:white; padding:6px 12px; border-radius:20px; border:1px solid #ddd; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+  .goog-te-gadget { font-family: inherit !important; }
+  .goog-te-banner-frame { display:none !important; }
+  body { top:0 !important; }
+</style>
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/icons/20261013_102833_0000.png" />
@@ -18,6 +25,18 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="/icons/20261013_102833_0000.png" />
   </head>
+  <div id="google_translate_element"></div>
+<script>
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+      pageLanguage: 'fr',
+      includedLanguages: 'fr,en',
+      layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+      autoDisplay: false
+    }, 'google_translate_element');
+  }
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
   <body>
     <div id="root"></div>
     <script type="module" src="./src/main.tsx"></script>
