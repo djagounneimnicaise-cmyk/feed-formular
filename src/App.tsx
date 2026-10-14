@@ -1,12 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useState, useEffect... }
-  // CODE TRADUCTION - NE PAS TOUCHER
-declare global {
-  interface Window {
-    google: any;
-    googleTranslateElementInit: () => void;
-  }
-}
+import {
+  Wheat, Scale, TrendingUp...
 import {
   Wheat, Scale, TrendingUp, AlertTriangle, CheckCircle2, XCircle,
   ChevronDown, ChevronUp, Calculator, RotateCcw,
