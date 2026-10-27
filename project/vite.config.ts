@@ -3,7 +3,9 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig({ base: "/feed-formular/",
+  plugins: [react()],
+})
   plugins: [react()],
   resolve: {
     alias: {
