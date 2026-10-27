@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   CheckCircle2, Loader2, Clock, Crown, X, Lock,
   ArrowRight, Smartphone,
@@ -6,10 +6,13 @@ import {
 import { useSubscription, PLANS, type PlanKey } from '@/lib/subscription';
 import { useAuth } from '@/lib/auth';
 import { useI18n } from '@/lib/i18n';
-import {
-  openKkiapayWidget, onKkiapaySuccess, onKkiapayFailed, onKkiapayError,
-} from '@/lib/kkiapay';
 import { supabase } from '@/lib/supabase';
+
+declare global {
+  interface Window {
+    FedaPay: any;
+  }
+}
 
 type PaywallProps = {
   onContinue: () => void;
@@ -23,7 +26,6 @@ export default function Paywall({ onContinue }: PaywallProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const pendingPlanRef = useRef<PlanKey | null>(null);
 
   const planLabels: Record<PlanKey, string> = {
     daily: t('plan24h'),
@@ -33,6 +35,7 @@ export default function Paywall({ onContinue }: PaywallProps) {
     monthly: t('plan30days'),
   };
 
+  // Vérification côté serveur avec FedaPay
   const activateFromServer = useCallback(async (plan: PlanKey, transactionId: string) => {
     setVerifying(true);
     try {
@@ -40,14 +43,19 @@ export default function Paywall({ onContinue }: PaywallProps) {
       const token = sessionData.session?.access_token;
       if (!token) throw new Error('no_session');
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-kkiapay`;
+      // On appelle notre nouvelle fonction Supabase pour FedaPay
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-fedapay`;
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ transactionId, plan, amount: PLANS.find((p) => p.key === plan)?.amountXOF ?? 0 }),
+        body: JSON.stringify({ 
+          transactionId, 
+          plan, 
+          amount: PLANS.find((p) => p.key === plan)?.amountXOF ?? 0 
+        }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.success) {
@@ -67,75 +75,66 @@ export default function Paywall({ onContinue }: PaywallProps) {
     } finally {
       setVerifying(false);
       setProcessing(false);
-      pendingPlanRef.current = null;
     }
   }, [activatePlan, onContinue, lang]);
 
+  // Charger le script FedaPay automatiquement
   useEffect(() => {
-    onKkiapaySuccess((response) => {
-      const plan = pendingPlanRef.current;
-      if (!plan) return;
-      pendingPlanRef.current = null;
-      const transactionId = typeof response?.transactionId === 'string' ? response.transactionId : '';
-      if (transactionId) {
-        activateFromServer(plan, transactionId);
-      } else {
-        setProcessing(false);
-        setError(
-          lang === 'fr'
-            ? 'Paiement reçu mais référence introuvable. Contactez le support.'
-            : 'Payment received but reference missing. Contact support.',
-        );
-      }
-    });
-    onKkiapayFailed(() => {
-      setProcessing(false);
-      pendingPlanRef.current = null;
-      setError(
-        lang === 'fr'
-          ? 'Le paiement a échoué ou a été annulé. Vous pouvez réessayer.'
-          : 'The payment failed or was cancelled. You can try again.',
-      );
-    });
-    onKkiapayError(() => {
-      setProcessing(false);
-      pendingPlanRef.current = null;
-      setError(
-        lang === 'fr'
-          ? 'Une erreur est survenue pendant le paiement. Vous pouvez réessayer.'
-          : 'An error occurred during payment. You can try again.',
-      );
-    });
-    // Listeners are registered once; plan/identity flow through refs.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (document.querySelector('script[src*="fedapay"]')) return;
+    const script = document.createElement('script');
+    script.src = 'https://cdn.fedapay.com/checkout.js';
+    script.async = true;
+    document.head.appendChild(script);
   }, []);
 
   const handlePay = useCallback((plan: PlanKey) => {
     setError('');
     const planDef = PLANS.find((p) => p.key === plan);
     if (!planDef) return;
-    pendingPlanRef.current = plan;
+
+    if (!window.FedaPay) {
+      setError(lang === 'fr' ? 'FedaPay est en cours de chargement, réessayez dans 2 secondes.' : 'FedaPay is loading, try again in 2 seconds.');
+      return;
+    }
+
     setProcessing(true);
     try {
       const meta = (user?.user_metadata ?? {}) as { last_name?: string; first_name?: string; email?: string; phone?: string };
-      openKkiapayWidget({
-        amount: planDef.amountXOF,
-        name: [meta.first_name, meta.last_name].filter(Boolean).join(' ') || undefined,
-        email: user?.email ?? meta.email,
-        phone: meta.phone,
-        partnerId: user?.id,
-      });
+      
+      window.FedaPay.init({
+        public_key: import.meta.env.VITE_FEDAPAY_PUBLIC_KEY,
+        transaction: {
+          amount: planDef.amountXOF,
+          description: `Feed Formular - ${planLabels[plan]}`,
+        },
+        customer: {
+          email: user?.email || meta.email || `client-${user?.id}@feedformular.com`,
+          firstname: meta.first_name || 'Client',
+          lastname: meta.last_name || 'FeedFormular',
+          phone_number: meta.phone ? { number: meta.phone, country: 'bj' } : undefined,
+        },
+      }).onComplete((resp: any) => {
+        console.log('FedaPay complete:', resp);
+        const transactionId = resp?.transaction?.id || resp?.id || resp?.transactionId;
+        if (transactionId && resp?.reason === 'CHECKOUT_COMPLETED') {
+          activateFromServer(plan, String(transactionId));
+        } else if (resp?.reason === 'DIALOG_DISMISSED') {
+          setProcessing(false);
+        } else {
+          setProcessing(false);
+        }
+      }).open();
+
     } catch (err) {
       console.error(err);
       setProcessing(false);
-      pendingPlanRef.current = null;
       setError(
         lang === 'fr'
           ? 'Impossible d\'ouvrir la page de paiement. Vérifiez votre connexion internet.'
           : 'Could not open the payment page. Check your internet connection.',
       );
     }
-  }, [user, lang]);
+  }, [user, lang, activateFromServer, planLabels]);
 
   if (success) {
     return (
@@ -158,12 +157,8 @@ export default function Paywall({ onContinue }: PaywallProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full my-8 overflow-hidden">
-        {/* Header */}
         <div className="relative bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-white text-center">
-          <button
-            onClick={onContinue}
-            className="absolute top-3 right-3 text-white/80 hover:text-white transition-colors"
-          >
+          <button onClick={onContinue} className="absolute top-3 right-3 text-white/80 hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
           <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 mx-auto mb-3">
@@ -173,14 +168,13 @@ export default function Paywall({ onContinue }: PaywallProps) {
           <p className="text-xs text-white/90 mt-1.5 max-w-xs mx-auto">{t('freeLimitDesc')}</p>
         </div>
 
-        {/* Plans */}
         <div className="p-5 space-y-2.5 max-h-[60vh] overflow-y-auto">
           <div className="flex items-center gap-2 text-[11px] text-slate-500 mb-1">
             <Smartphone className="w-3.5 h-3.5" />
             <span>
               {lang === 'fr'
-                ? 'Payez par Mobile Money (MTN, Moov, Wave) ou carte bancaire — via Kkiapay'
-                : 'Pay with Mobile Money (MTN, Moov, Wave) or credit card — via Kkiapay'}
+                ? 'Payez par Mobile Money (MTN, Moov) ou carte bancaire — via FedaPay'
+                : 'Pay with Mobile Money (MTN, Moov) or credit card — via FedaPay'}
             </span>
           </div>
           {PLANS.map((plan) => {
@@ -226,7 +220,6 @@ export default function Paywall({ onContinue }: PaywallProps) {
           )}
         </div>
 
-        {/* Processing overlay */}
         {processing && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3">
@@ -236,7 +229,6 @@ export default function Paywall({ onContinue }: PaywallProps) {
           </div>
         )}
 
-        {/* Verification overlay */}
         {verifying && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3 text-center px-6">
@@ -248,7 +240,6 @@ export default function Paywall({ onContinue }: PaywallProps) {
           </div>
         )}
 
-        {/* Footer */}
         <div className="px-5 pb-5">
           <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400">
             <Lock className="w-3 h-3" />
